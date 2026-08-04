@@ -53,10 +53,10 @@ export default function PatientVideoCall({ patient, consultation, onCallEnd }) {
       const socket = getSocket();
 
       // 1. Get Patient's local camera stream
-      const stream = await navigator.mediaDevices.getUserMedia({
+      const stream = await (navigator.mediaDevices ? navigator.mediaDevices.getUserMedia({
         video: { width: 640, height: 480, frameRate: { ideal: 30 } },
         audio: true,
-      }).catch((err) => {
+      }) : Promise.resolve(null)).catch((err) => {
         console.warn('Local camera access warning:', err);
         return null;
       });
@@ -69,13 +69,18 @@ export default function PatientVideoCall({ patient, consultation, onCallEnd }) {
         if (fallbackVideoRef.current) {
           fallbackVideoRef.current.srcObject = stream;
         }
+      }
 
+      if (socket) {
         startFrameBroadcasting(socket);
       }
 
       // 2. WebRTC Peer Connection
       const pc = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+        ],
       });
       peerConnectionRef.current = pc;
 
@@ -92,8 +97,9 @@ export default function PatientVideoCall({ patient, consultation, onCallEnd }) {
 
       pc.onicecandidate = (event) => {
         if (event.candidate && socket) {
+          const targetRoom = consultation?.id ? `consultation-${consultation.id}` : `doctor-${consultation?.doctorId || 'active'}`;
           socket.emit('ice-candidate', {
-            to: `doctor-${consultation?.doctorId || 'active'}`,
+            to: targetRoom,
             candidate: event.candidate,
           });
         }
@@ -105,7 +111,8 @@ export default function PatientVideoCall({ patient, consultation, onCallEnd }) {
           socket.emit('join-consultation', { consultationId: consultation.id });
         }
 
-        socket.emit('request-offer', { to: `doctor-${consultation?.doctorId}` });
+        const targetRoom = consultation?.id ? `consultation-${consultation.id}` : `doctor-${consultation?.doctorId}`;
+        socket.emit('request-offer', { to: targetRoom });
 
         socket.on('call-offer', async (data) => {
           if (peerConnectionRef.current && data.offer) {
@@ -136,7 +143,7 @@ export default function PatientVideoCall({ patient, consultation, onCallEnd }) {
         });
 
         socket.on('video-stream-frame', (data) => {
-          if (data.sender === 'doctor' && data.frame) {
+          if (data.sender !== 'patient' && data.frame) {
             setRemoteFrame(data.frame);
           }
         });
@@ -183,6 +190,8 @@ export default function PatientVideoCall({ patient, consultation, onCallEnd }) {
 
     frameBroadcastIntervalRef.current = setInterval(() => {
       const video = localVideoRef.current || fallbackVideoRef.current;
+      const targetRoom = consultation?.id ? `consultation-${consultation.id}` : `doctor-${consultation?.doctorId || 'active'}`;
+
       if (video && video.readyState === video.HAVE_ENOUGH_DATA && socket) {
         canvas.width = 480;
         canvas.height = 360;
@@ -190,7 +199,7 @@ export default function PatientVideoCall({ patient, consultation, onCallEnd }) {
         const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
 
         socket.emit('video-stream-frame', {
-          to: `doctor-${consultation?.doctorId || 'active'}`,
+          to: targetRoom,
           sender: 'patient',
           frame: dataUrl,
         });

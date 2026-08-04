@@ -90,19 +90,23 @@ io.on('connection', (socket) => {
 
   // WebRTC Signaling
   socket.on('call-offer', ({ to, offer }) => {
-    io.to(to).emit('call-offer', { from: socket.id, offer });
+    if (to) io.to(to).emit('call-offer', { from: socket.id, offer });
+    socket.broadcast.emit('call-offer', { from: socket.id, offer });
   });
 
   socket.on('call-answer', ({ to, answer }) => {
-    io.to(to).emit('call-answer', { from: socket.id, answer });
+    if (to) io.to(to).emit('call-answer', { from: socket.id, answer });
+    socket.broadcast.emit('call-answer', { from: socket.id, answer });
   });
 
   socket.on('ice-candidate', ({ to, candidate }) => {
-    io.to(to).emit('ice-candidate', { from: socket.id, candidate });
+    if (to) io.to(to).emit('ice-candidate', { from: socket.id, candidate });
+    socket.broadcast.emit('ice-candidate', { from: socket.id, candidate });
   });
 
   socket.on('request-offer', ({ to }) => {
-    io.to(to).emit('request-offer', { from: socket.id });
+    if (to) io.to(to).emit('request-offer', { from: socket.id });
+    socket.broadcast.emit('request-offer', { from: socket.id });
   });
 
   socket.on('call-end', ({ to }) => {
@@ -130,7 +134,8 @@ io.on('connection', (socket) => {
 
   // Live Video Frame Relay for real-time face-to-face video streaming
   socket.on('video-stream-frame', ({ to, frame, sender }) => {
-    io.to(to).emit('video-stream-frame', { frame, sender });
+    if (to) io.to(to).emit('video-stream-frame', { frame, sender });
+    socket.broadcast.emit('video-stream-frame', { frame, sender });
   });
 
   // Queue updates
