@@ -125,7 +125,6 @@ Port Allocation:
 - **Server API & Websockets**: `http://localhost:3001`
 - **Doctor Portal**: `http://localhost:5174`
 - **Patient Portal**: `http://localhost:5175`
-- **Kiosk Portal**: `http://localhost:5173`
 
 ---
 
