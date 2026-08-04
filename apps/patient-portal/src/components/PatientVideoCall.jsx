@@ -138,7 +138,10 @@ export default function PatientVideoCall({ patient, consultation, onCallEnd }) {
         });
 
         socket.on('new-call-message', (msg) => {
-          setChatMessages((prev) => [...prev, msg]);
+          setChatMessages((prev) => {
+            if (prev.some((m) => (m.id && msg.id && m.id === msg.id) || (m.createdAt === msg.createdAt && m.messageText === msg.messageText))) return prev;
+            return [...prev, msg];
+          });
         });
 
         socket.on('call-ended', () => {
