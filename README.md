@@ -95,32 +95,37 @@ npm install
 ```
 
 ### 3. Environment Setup
-Copy `.env.example` to `.env` in the project root and configure your credentials:
+Copy `.env.example` to `.env` in the project root:
 ```bash
+# On Linux / macOS / Git Bash:
 cp .env.example .env
-```
-Key variables:
-- `PORT`: Server port (default: `5000`)
-- `GEMINI_API_KEY`: API key for AI symptom triage engine
-- `DATABASE_URL`: Database connection string
 
-### 4. Database Setup
+# On Windows PowerShell:
+Copy-Item .env.example .env
+```
+Key variables in `.env`:
+- `PORT`: Server API port (default: `3001`)
+- `DATABASE_URL`: SQLite database connection string (`file:./dev.db`)
+- `GEMINI_API_KEY` / `GROK_API_KEY`: API key for AI symptom triage engine (optional)
+
+### 4. Database Setup & Seeding
+Initialize the SQLite database schema and seed initial doctor, village, and kiosk data:
 ```bash
 npm run db:migrate
 npm run db:seed
 ```
 
 ### 5. Run Development Servers
-Start all applications concurrently (Server, Doctor Portal, Patient Portal, Kiosk Portal):
+Start all applications concurrently (Server, Doctor Portal, Patient Portal):
 ```bash
 npm run dev
 ```
 
 Port Allocation:
-- **Server API & Websockets**: `http://localhost:5000`
-- **Kiosk Portal**: `http://localhost:5173`
+- **Server API & Websockets**: `http://localhost:3001`
 - **Doctor Portal**: `http://localhost:5174`
 - **Patient Portal**: `http://localhost:5175`
+- **Kiosk Portal**: `http://localhost:5173`
 
 ---
 
