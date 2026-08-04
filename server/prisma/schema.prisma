@@ -1,0 +1,279 @@
+// ==============================================
+// Prisma Schema — KIOSK Healthcare
+// ==============================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ── Village & Kiosk ──────────────────────────
+
+model Village {
+  id        String     @id @default(uuid())
+  name      String
+  district  String
+  state     String
+  createdAt DateTime   @default(now()) @map("created_at")
+  kiosks    Kiosk[]
+  villagers Villager[]
+
+  @@map("villages")
+}
+
+model Kiosk {
+  id            String          @id @default(uuid())
+  villageId     String          @map("village_id")
+  machineCode   String          @unique @map("machine_code")
+  status        String          @default("online")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  village       Village         @relation(fields: [villageId], references: [id])
+  consultations Consultation[]
+  medicineStock MedicineStock[]
+
+  @@map("kiosks")
+}
+
+// ── Users ────────────────────────────────────
+
+model Villager {
+  id                    String         @id @default(uuid())
+  villageId             String         @map("village_id")
+  name                  String
+  phone                 String?
+  dob                   DateTime?
+  gender                String?
+  address               String?
+  emergencyContactName  String?        @map("emergency_contact_name")
+  emergencyContactPhone String?        @map("emergency_contact_phone")
+  faceEncoding          Json?          @map("face_encoding")
+  medicalHistory        Json?          @map("medical_history")
+  createdAt             DateTime       @default(now()) @map("created_at")
+  updatedAt             DateTime       @updatedAt @map("updated_at")
+  village               Village        @relation(fields: [villageId], references: [id])
+  consultations         Consultation[]
+  bloodTests            BloodTest[]
+  deliveries            Delivery[]
+
+  @@map("villagers")
+}
+
+model Doctor {
+  id               String               @id @default(uuid())
+  name             String
+  email            String               @unique
+  passwordHash     String               @map("password_hash")
+  specialization   String?
+  licenseNo        String?              @map("license_no")
+  phone            String?
+  assignedVillages String?              @map("assigned_villages")
+  isAvailable      Boolean              @default(true) @map("is_available")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  consultations    Consultation[]
+  availability     DoctorAvailability[]
+
+  @@map("doctors")
+}
+
+model DoctorAvailability {
+  id            String   @id @default(uuid())
+  doctorId      String   @map("doctor_id")
+  availableFrom DateTime @map("available_from")
+  availableTo   DateTime @map("available_to")
+  currentLoad   Int      @default(0) @map("current_load")
+  doctor        Doctor   @relation(fields: [doctorId], references: [id])
+
+  @@map("doctor_availability")
+}
+
+// ── Consultations ────────────────────────────
+
+model Consultation {
+  id              String         @id @default(uuid())
+  villagerId      String         @map("villager_id")
+  doctorId        String?        @map("doctor_id")
+  kioskId         String         @map("kiosk_id")
+  status          String         @default("waiting")
+  aiSymptoms      Json?          @map("ai_symptoms")
+  aiTriageResult  Json?          @map("ai_triage_result")
+  priorityScore   Int            @default(1) @map("priority_score")
+  scheduledAt     DateTime?      @map("scheduled_at")
+  startedAt       DateTime?      @map("started_at")
+  endedAt         DateTime?      @map("ended_at")
+  doctorNotes     String?        @map("doctor_notes")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  villager        Villager       @relation(fields: [villagerId], references: [id])
+  doctor          Doctor?        @relation(fields: [doctorId], references: [id])
+  kiosk           Kiosk          @relation(fields: [kioskId], references: [id])
+  prescriptions   Prescription[]
+  bloodTests      BloodTest[]
+  deliveries      Delivery[]
+  triage          AiTriage?
+  review          Review?
+  callMessages    CallMessage[]
+
+  @@map("consultations")
+}
+
+model AiTriage {
+  id                   String       @id @default(uuid())
+  consultationId       String       @unique @map("consultation_id")
+  symptomsRaw          Json?        @map("symptoms_raw")
+  aiAnalysis           Json?        @map("ai_analysis")
+  emergencyScore       Int          @default(1) @map("emergency_score")
+  estimatedWaitMinutes Int?         @map("estimated_wait_minutes")
+  aiProvider           String?      @map("ai_provider")
+  createdAt            DateTime     @default(now()) @map("created_at")
+  consultation         Consultation @relation(fields: [consultationId], references: [id])
+
+  @@map("ai_triages")
+}
+
+// ── Medicine ─────────────────────────────────
+
+model Medicine {
+  id                String              @id @default(uuid())
+  name              String
+  category          String?
+  unit              String              @default("tablet")
+  reorderThreshold  Int                 @default(10) @map("reorder_threshold")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  stocks            MedicineStock[]
+  prescriptions     Prescription[]
+  dispensedMedicines DispensedMedicine[]
+  callMessages      CallMessage[]
+
+  @@map("medicines")
+}
+
+model MedicineStock {
+  id             String   @id @default(uuid())
+  kioskId        String   @map("kiosk_id")
+  medicineId     String   @map("medicine_id")
+  quantity       Int      @default(0)
+  lowThreshold   Int      @default(10) @map("low_threshold")
+  autoReorder    Boolean  @default(true) @map("auto_reorder")
+  lastRestocked  DateTime? @map("last_restocked")
+  kiosk          Kiosk    @relation(fields: [kioskId], references: [id])
+  medicine       Medicine @relation(fields: [medicineId], references: [id])
+
+  @@unique([kioskId, medicineId])
+  @@map("medicine_stocks")
+}
+
+model Prescription {
+  id               String              @id @default(uuid())
+  consultationId   String              @map("consultation_id")
+  medicineId       String              @map("medicine_id")
+  dosage           String?
+  quantity         Int                 @default(1)
+  instructions     String?
+  createdAt        DateTime            @default(now()) @map("created_at")
+  consultation     Consultation        @relation(fields: [consultationId], references: [id])
+  medicine         Medicine            @relation(fields: [medicineId], references: [id])
+  dispensedMedicine DispensedMedicine?
+
+  @@map("prescriptions")
+}
+
+model DispensedMedicine {
+  id              String       @id @default(uuid())
+  prescriptionId  String       @unique @map("prescription_id")
+  medicineId      String       @map("medicine_id")
+  quantity        Int
+  status          String       @default("pending")
+  dispensedAt     DateTime?    @map("dispensed_at")
+  prescription    Prescription @relation(fields: [prescriptionId], references: [id])
+  medicine        Medicine     @relation(fields: [medicineId], references: [id])
+
+  @@map("dispensed_medicines")
+}
+
+// ── Blood Tests ──────────────────────────────
+
+model BloodTest {
+  id              String        @id @default(uuid())
+  villagerId      String        @map("villager_id")
+  consultationId  String?       @map("consultation_id")
+  testType        String        @map("test_type")
+  results         Json?
+  status          String        @default("pending")
+  takenAt         DateTime?     @map("taken_at")
+  durationMinutes Int?          @map("duration_minutes")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  villager        Villager      @relation(fields: [villagerId], references: [id])
+  consultation    Consultation? @relation(fields: [consultationId], references: [id])
+
+  @@map("blood_tests")
+}
+
+// ── Reviews ──────────────────────────────────
+
+model Review {
+  id               String       @id @default(uuid())
+  consultationId   String       @unique @map("consultation_id")
+  rating           Int
+  feedbackText     String?      @map("feedback_text")
+  feedbackVoiceUrl String?      @map("feedback_voice_url")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  consultation     Consultation @relation(fields: [consultationId], references: [id])
+
+  @@map("reviews")
+}
+
+// ── Reorder Requests ─────────────────────────
+
+model ReorderRequest {
+  id         String   @id @default(uuid())
+  kioskId    String   @map("kiosk_id")
+  medicineId String   @map("medicine_id")
+  quantity   Int
+  status     String   @default("pending")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("reorder_requests")
+}
+
+// ── Delivery Management ──────────────────────
+
+model Delivery {
+  id                  String        @id @default(uuid())
+  villagerId          String        @map("villager_id")
+  consultationId      String?       @map("consultation_id")
+  prescriptionId      String?       @map("prescription_id")
+  deliveryAddress     String?       @map("delivery_address")
+  deliveryDate        DateTime?     @map("delivery_date")
+  status              String        @default("Pending") // Pending | Dispatched | Delivered | Cancelled
+  courierName         String?       @map("courier_name")
+  courierContact      String?       @map("courier_contact")
+  paymentStatus       String        @default("Prepaid") @map("payment_status") // COD | Prepaid
+  specialInstructions String?       @map("special_instructions")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+
+  villager            Villager      @relation(fields: [villagerId], references: [id])
+  consultation        Consultation? @relation(fields: [consultationId], references: [id])
+
+  @@map("deliveries")
+}
+
+// ── Call Messages (In-Call Chat & Prescription Log) ───
+
+model CallMessage {
+  id                   String        @id @default(uuid())
+  consultationId       String        @map("consultation_id")
+  sender               String        // doctor | patient | system
+  messageText          String        @map("message_text")
+  prescribedMedicineId String?       @map("prescribed_medicine_id")
+  createdAt            DateTime      @default(now()) @map("created_at")
+
+  consultation         Consultation  @relation(fields: [consultationId], references: [id])
+  prescribedMedicine   Medicine?     @relation(fields: [prescribedMedicineId], references: [id])
+
+  @@map("call_messages")
+}
+
