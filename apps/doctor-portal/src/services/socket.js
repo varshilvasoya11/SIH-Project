@@ -9,7 +9,8 @@ let socket = null;
 export function connectSocket() {
   if (socket?.connected) return socket;
 
-  socket = io('/', {
+  const serverUrl = import.meta.env.VITE_SERVER_URL || '/';
+  socket = io(serverUrl, {
     transports: ['websocket', 'polling'],
     reconnection: true,
     reconnectionAttempts: Infinity,

@@ -8,7 +8,8 @@ let socket = null;
 
 export function initSocket() {
   if (!socket) {
-    socket = io('/', {
+    const serverUrl = import.meta.env.VITE_SERVER_URL || '/';
+    socket = io(serverUrl, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 10,
