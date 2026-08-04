@@ -50,3 +50,13 @@ export const getPatientDeliveries = (patientId) =>
 
 export const createMedicineOrder = (data) =>
   request('/deliveries', { method: 'POST', body: JSON.stringify(data) });
+
+// In-Call Chat Messages
+export const getCallMessages = (consultationId) =>
+  request(`/consultations/${consultationId}/messages`);
+
+export const sendCallMessage = (consultationId, data) =>
+  request(`/consultations/${consultationId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
