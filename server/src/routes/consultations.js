@@ -205,7 +205,7 @@ router.post('/:id/messages', authMiddleware, async (req, res, next) => {
       include: { prescribedMedicine: true },
     });
 
-    io.emit('new-call-message', message);
+    io.to(`consultation-${req.params.id}`).emit('new-call-message', message);
 
     res.status(201).json(message);
   } catch (err) {

@@ -81,7 +81,7 @@ router.post('/', authMiddleware, doctorOnly, async (req, res, next) => {
         include: { prescribedMedicine: true },
       });
 
-      io.emit('new-call-message', callMsg);
+      io.to(`consultation-${consultationId}`).emit('new-call-message', callMsg);
 
       // Real-time WebSocket push: automatically add prescribed medicine to Patient Portal cart
       io.emit('prescription-added-to-cart', {

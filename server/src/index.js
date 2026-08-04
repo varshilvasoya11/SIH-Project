@@ -86,6 +86,14 @@ io.on('connection', (socket) => {
     console.log(`📍 ${socket.id} joined room: ${role}-${id}`);
   });
 
+  // Join specific consultation room for isolated chat
+  socket.on('join-consultation', ({ consultationId }) => {
+    if (consultationId) {
+      socket.join(`consultation-${consultationId}`);
+      console.log(`💬 Socket ${socket.id} joined consultation room: consultation-${consultationId}`);
+    }
+  });
+
   // WebRTC Signaling
   socket.on('call-offer', ({ to, offer }) => {
     io.to(to).emit('call-offer', { from: socket.id, offer });

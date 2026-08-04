@@ -99,6 +99,9 @@ export default function VideoCall({ consultation, onCallEnd }) {
 
       // 3. Listen for socket events
       if (socket) {
+        if (consultation?.id) {
+          socket.emit('join-consultation', { consultationId: consultation.id });
+        }
         socket.emit('request-offer', { to: `doctor-${consultation?.doctorId}` });
 
         socket.on('call-offer', async (data) => {

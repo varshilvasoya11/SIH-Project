@@ -101,6 +101,10 @@ export default function PatientVideoCall({ patient, consultation, onCallEnd }) {
 
       // 3. Socket listeners
       if (socket) {
+        if (consultation?.id) {
+          socket.emit('join-consultation', { consultationId: consultation.id });
+        }
+
         socket.emit('request-offer', { to: `doctor-${consultation?.doctorId}` });
 
         socket.on('call-offer', async (data) => {
@@ -138,6 +142,9 @@ export default function PatientVideoCall({ patient, consultation, onCallEnd }) {
         });
 
         socket.on('new-call-message', (msg) => {
+          if (msg.consultationId && consultation?.id && msg.consultationId !== consultation.id) {
+            return;
+          }
           setChatMessages((prev) => {
             if (prev.some((m) => (m.id && msg.id && m.id === msg.id) || (m.createdAt === msg.createdAt && m.messageText === msg.messageText))) return prev;
             return [...prev, msg];
